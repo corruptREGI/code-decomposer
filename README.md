@@ -4,7 +4,7 @@ EcoRoute Lite is a small web app that routes text tasks to a deterministic local
 
 ## Features
 
-- Runs supported deterministic tasks locally, including email and URL extraction, text statistics, whitespace cleanup, JSON formatting, text case conversion, CSV-to-JSON conversion, and Base64 conversion.
+- Runs supported deterministic tasks locally, including basic arithmetic, email and URL extraction, text statistics, whitespace cleanup, JSON formatting, text case conversion, CSV-to-JSON conversion, and Base64 conversion.
 - Routes other prompts to the configured Gemma model through Google's `@google/genai` SDK.
 - Offers automatic routing, manual route selection, optional JSON output, and a baseline comparison view.
 - Keeps request counters and latency summaries in the browser's local storage.

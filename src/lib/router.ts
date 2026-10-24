@@ -40,6 +40,103 @@ export interface ExecutionResult {
 const EMAIL_REGEX = /[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/g;
 const URL_REGEX = /https?:\/\/[^\s$.?#].[^\s]*/gi;
 
+type ArithmeticResult = { valid: true; value?: number; error?: string } | { valid: false };
+
+/** Parse a small arithmetic expression without eval or generated code. */
+function evaluateArithmetic(expression: string): ArithmeticResult {
+  if (!expression || expression.length > 256) return { valid: false };
+
+  const tokens: string[] = [];
+  const tokenizer = /\s*(\d+(?:\.\d*)?|\.\d+|[()+\-*/%^])/gy;
+  let offset = 0;
+  while (offset < expression.length) {
+    if (!expression.slice(offset).trim()) break;
+    tokenizer.lastIndex = offset;
+    const match = tokenizer.exec(expression);
+    if (!match) return { valid: false };
+    tokens.push(match[1]);
+    if (tokens.length > 128) return { valid: false };
+    offset = tokenizer.lastIndex;
+  }
+  if (!tokens.length) return { valid: false };
+
+  let cursor = 0;
+  const parseExpression = (): number => {
+    let value = parseTerm();
+    while (tokens[cursor] === '+' || tokens[cursor] === '-') {
+      const operator = tokens[cursor++];
+      const right = parseTerm();
+      value = operator === '+' ? value + right : value - right;
+    }
+    return value;
+  };
+  const parseTerm = (): number => {
+    let value = parseUnary();
+    while (tokens[cursor] === '*' || tokens[cursor] === '/' || tokens[cursor] === '%') {
+      const operator = tokens[cursor++];
+      const right = parseUnary();
+      if ((operator === '/' || operator === '%') && right === 0) {
+        throw new Error('Division by zero.');
+      }
+      if (operator === '*') value *= right;
+      else if (operator === '/') value /= right;
+      else value %= right;
+    }
+    return value;
+  };
+  const parseUnary = (): number => {
+    if (tokens[cursor] === '+') {
+      cursor++;
+      return parseUnary();
+    }
+    if (tokens[cursor] === '-') {
+      cursor++;
+      return -parseUnary();
+    }
+    return parsePower();
+  };
+  const parsePower = (): number => {
+    const value = parsePrimary();
+    if (tokens[cursor] === '^') {
+      cursor++;
+      return value ** parseUnary();
+    }
+    return value;
+  };
+  const parsePrimary = (): number => {
+    const token = tokens[cursor++];
+    if (token === '(') {
+      const value = parseExpression();
+      if (tokens[cursor++] !== ')') throw new Error('Unbalanced parentheses.');
+      return value;
+    }
+    if (token && /^(?:\d+(?:\.\d*)?|\.\d+)$/.test(token)) return Number(token);
+    throw new Error('Invalid arithmetic expression.');
+  };
+
+  try {
+    const value = parseExpression();
+    if (cursor !== tokens.length) return { valid: false };
+    if (!Number.isFinite(value)) return { valid: true, error: 'The result is outside the supported numeric range.' };
+    return { valid: true, value };
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Division by zero.') {
+      return { valid: true, error: error.message };
+    }
+    return { valid: false };
+  }
+}
+
+function parseArithmeticPrompt(input: string): (ArithmeticResult & { expression: string }) | null {
+  const match = /^(?:(?:please\s+)?(?:calculate|compute|evaluate|solve)\s+|what\s+is\s+|how\s+much\s+is\s+)?(.+?)\??$/i.exec(input.trim());
+  if (!match) return null;
+
+  const expression = match[1].trim();
+  if (!/[+\-*/%^]/.test(expression)) return null;
+  const result = evaluateArithmetic(expression);
+  return result.valid ? { ...result, expression } : null;
+}
+
 /**
  * Classify a prompt or input text using deterministic rules.
  * Runs in under 1ms without calling any AI model.
@@ -55,6 +152,20 @@ export function classifyRequest(input: string): RoutingDecision {
       ruleName: 'Empty Input Handler',
       confidence: 1.0,
       reason: 'No content provided. Handled instantly on local CPU.',
+      estimatedComplexity: 'O(1)',
+    };
+  }
+
+  // Basic arithmetic is deterministic and can be evaluated locally.
+  const arithmetic = parseArithmeticPrompt(trimmed);
+  if (arithmetic) {
+    return {
+      route: 'local',
+      ruleId: 'LOCAL_ARITHMETIC',
+      ruleName: 'Local Arithmetic Calculator',
+      confidence: 1.0,
+      reason: 'A supported arithmetic expression was detected and can be evaluated locally without a model call.',
+      matchedPattern: arithmetic.expression,
       estimatedComplexity: 'O(1)',
     };
   }
@@ -252,6 +363,17 @@ export function executeLocalTask(ruleId: string, rawInput: string): { output: st
   };
 
   switch (ruleId) {
+    case 'LOCAL_ARITHMETIC': {
+      const calculation = parseArithmeticPrompt(trimmed);
+      if (!calculation) {
+        return { output: 'Could not parse this arithmetic expression.', isValidJson: false };
+      }
+      if (calculation.error) {
+        return { output: calculation.error, isValidJson: false };
+      }
+      return { output: String(calculation.value), isValidJson: false };
+    }
+
     case 'LOCAL_EXTRACT_EMAILS': {
       const payload = extractPayload(trimmed);
       const matches = payload.match(EMAIL_REGEX) || trimmed.match(EMAIL_REGEX) || [];

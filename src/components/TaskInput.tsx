@@ -12,6 +12,12 @@ export interface PresetExample {
 
 export const PRESET_EXAMPLES: PresetExample[] = [
   {
+    title: 'Quick Calculator',
+    category: 'Simple / Local',
+    description: 'Safely evaluates arithmetic expressions on the local CPU',
+    prompt: 'Calculate (144 / 12) + 7 * 3',
+  },
+  {
     title: 'Extract Emails',
     category: 'Simple / Local',
     description: 'Solves via RFC 5322 regex on CPU (0 tokens, <1ms)',
@@ -53,8 +59,29 @@ EcoRoute Lite demonstrates the paradigm of green AI computing. By deterministica
 {"app":"EcoRoute Lite","version":"1.0.0","tags":["green-ai","gemma-4","google-genai-sdk"],"runtime":{"env":"edge-cpu","latency_ms":0.4,"cost_usd":0.000}}`,
   },
   {
+    title: 'Extract URLs',
+    category: 'Simple / Local',
+    description: 'Find and deduplicate links with a local URL parser',
+    prompt: `Extract URLs from this note:
+Project site: https://example.org/project
+Docs: https://docs.example.org/guide
+Project site (again): https://example.org/project`,
+  },
+  {
+    title: 'Encode Text to Base64',
+    category: 'Simple / Local',
+    description: 'Encode a string locally with no API call',
+    prompt: 'Encode to Base64: EcoRoute keeps simple tasks local.',
+  },
+  {
+    title: 'Create a URL Slug',
+    category: 'Simple / Local',
+    description: 'Turn a title into a lowercase hyphenated slug',
+    prompt: 'Convert to slug: Local First AI Routing for Campus Tools',
+  },
+  {
     title: 'CSV Table to JSON',
-    category: 'Coding',
+    category: 'Simple / Local',
     description: 'Tabular delimited serializer on local CPU',
     prompt: `CSV to JSON:
 id,model_name,parameters,architecture,open_weight
