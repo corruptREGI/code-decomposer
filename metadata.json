@@ -1,0 +1,6 @@
+{
+  "name": "EcoRoute Lite",
+  "description": "Smart green AI routing engine using Google Gen AI SDK to run deterministic tasks locally and route complex reasoning to Gemma 4 (gemma-4-26b-a4b-it).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
