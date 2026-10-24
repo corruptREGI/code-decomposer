@@ -1,14 +1,13 @@
 {
-  "name": "react-example",
-  "private": true,
-  "version": "0.0.0",
+  "name": "code-decomposer",
+  "version": "0.1.0",
   "type": "module",
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build",
     "start": "tsx server.ts",
     "preview": "vite preview",
-    "clean": "rm -rf dist server.js",
+    "clean": "node -e \"for (const p of ['dist', 'server.js']) require('node:fs').rmSync(p, { recursive: true, force: true })\"",
     "lint": "tsc --noEmit"
   },
   "dependencies": {
